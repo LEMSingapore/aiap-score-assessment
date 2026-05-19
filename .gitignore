@@ -1,0 +1,36 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pkl
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Data and artifacts (do not commit large or private files)
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+data/*.csv
+data/*.parquet
+data/*.xlsx
+
+artifacts/
+*.model
+*.joblib
+*.pkl
+
+# Logs
+logs/
+*.log
