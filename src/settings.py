@@ -1,12 +1,34 @@
 from pathlib import Path
 
-# Project paths
-REPO_ROOT = Path(__file__).resolve().parents[1]
-DATA_DIR = REPO_ROOT / "data"
-ARTIFACTS_DIR = REPO_ROOT / "artifacts"
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
 DB_PATH = DATA_DIR / "score.db"
 
-# Targets (update once you inspect score.db)
-TARGET_REGRESSION = None
-TARGET_CLASSIFICATION = None
+TARGET_COL = "final_test"
+
+RANDOM_STATE = 42
+TEST_SIZE = 0.2
+
+NUM_FEATURES = [
+    "number_of_siblings",
+    "hours_per_week",
+    "attendance_rate",
+    "classsize",
+]
+
+CAT_FEATURES = [
+    "direct_admission",
+    "CCA",
+    "learning_style",
+    "tuition",
+    "sleep_time",
+]
+
+INDICATOR_FEATURES = [
+    "attendance_rate_was_nan",
+]
+
+ID_COLUMNS = ["index", "student_id", "bag_color"]
+
+LOW_SIGNAL_COLUMNS = ["gender", "wake_time", "mode_of_transport"]

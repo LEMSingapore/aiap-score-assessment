@@ -11,25 +11,12 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
-
-NUM_FEATURES = [
-    "number_of_siblings",
-    "hours_per_week",
-    "attendance_rate",
-    "classsize",
-]
-
-CAT_FEATURES = [
-    "direct_admission",
-    "CCA",
-    "learning_style",
-    "tuition",
-    "sleep_time",
-]
-
-INDICATOR_FEATURES = [
-    "attendance_rate_was_nan",
-]
+from src.settings import (
+    NUM_FEATURES,
+    CAT_FEATURES,
+    INDICATOR_FEATURES,
+    RANDOM_STATE,
+)
 
 def build_preprocessor() -> ColumnTransformer:
     """
@@ -159,3 +146,42 @@ def train_and_evaluate_models(
     )
 
     return trained_models, results_df
+
+def get_feature_importance(best_pipeline: Pipeline) -> pd.DataFrame:
+    """
+    Extract feature importances from a fitted tree-based model pipeline.
+
+    This function assumes:
+    - the pipeline contains a fitted `preprocessor`
+    - the categorical transformer uses OneHotEncoder
+    - the model exposes `feature_importances_` (e.g. RandomForestRegressor)
+
+    Args:
+        best_pipeline: A fitted sklearn Pipeline containing:
+            - "preprocessor"
+            - "model"
+
+    Returns:
+        DataFrame with feature names and importance scores, sorted descending.
+    """
+    preprocessor = best_pipeline.named_steps["preprocessor"]
+    model = best_pipeline.named_steps["model"]
+
+    if not hasattr(model, "feature_importances_"):
+        raise ValueError("Model does not expose feature_importances_.")
+
+    onehot = preprocessor.named_transformers_["cat"].named_steps["onehot"]
+
+    cat_feature_names = list(onehot.get_feature_names_out(CAT_FEATURES))
+
+    feature_names = NUM_FEATURES + cat_feature_names + INDICATOR_FEATURES
+    importances = model.feature_importances_
+
+    importance_df = pd.DataFrame(
+        {
+            "feature": feature_names,
+            "importance": importances,
+        }
+    ).sort_values(by="importance", ascending=False).reset_index(drop=True)
+
+    return importance_df

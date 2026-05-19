@@ -18,31 +18,14 @@ import pandas as pd
 # Top-level constants (mirroring final feature set in eda.ipynb)
 # ---------------------------------------------------------------------
 
-TARGET_COL = "final_test"
-
-NUM_FEATURES = [
-    "number_of_siblings",
-    "hours_per_week",
-    "attendance_rate",
-    "classsize",
-]
-
-CAT_FEATURES = [
-    "direct_admission",
-    "CCA",
-    "learning_style",
-    "tuition",
-    "sleep_time",
-]
-
-INDICATOR_FEATURES = [
-    "attendance_rate_was_nan",
-]
-
-ID_COLUMNS = ["index", "studentid", "bagcolor"]
-
-LOW_SIGNAL_COLUMNS = ["gender", "waketime", "mode_of_transport"]
-
+from src.settings import (
+    TARGET_COL,
+    NUM_FEATURES,
+    CAT_FEATURES,
+    INDICATOR_FEATURES,
+    ID_COLUMNS,
+    LOW_SIGNAL_COLUMNS,
+)
 
 # ---------------------------------------------------------------------
 # 1. Data loading

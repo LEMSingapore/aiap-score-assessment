@@ -3,13 +3,8 @@ from pathlib import Path
 from sklearn.model_selection import train_test_split
 
 from src.preprocessing import prepare_dataset
-from src.models import train_and_evaluate_models
-
-
-RANDOM_STATE = 42
-TEST_SIZE = 0.2
-DB_PATH = Path("data/score.db")
-
+from src.models import train_and_evaluate_models, get_feature_importance
+from src.settings import DB_PATH, RANDOM_STATE, TEST_SIZE
 
 def main() -> None:
     """
@@ -44,6 +39,12 @@ def main() -> None:
     best_model_name = results_df.iloc[0]["model"]
     print(f"\nBest model: {best_model_name}")
 
+    best_pipeline = trained_models[best_model_name]
+
+    if best_model_name == "random_forest":
+        importance_df = get_feature_importance(best_pipeline)
+        print("\nTop 10 feature importances:")
+        print(importance_df.head(10))
 
 if __name__ == "__main__":
     main()
