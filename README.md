@@ -145,20 +145,29 @@ Change these values instead of hard‑coding paths or constants inside other mod
 
 ## 6. Results Summary
 
-<!-- Fill this section after you complete the assessment -->
+- **Target:** Regression on `final_test` (student exam score, range 32–100)
 
-- **Target(s):**  
-  - Regression: `final_test` (student exam score)  
-  - Classification: n/a for this assessment  
+- **Models evaluated:**
 
-- **Best model(s):**  
-  - Model type and key hyperparameters  
+  | Model | MAE | RMSE | R² |
+  |---|---|---|---|
+  | RandomForestRegressor | 3.67 | 5.36 | 0.85 |
+  | GradientBoostingRegressor | 4.83 | 6.47 | 0.78 |
+  | LinearRegression (baseline) | 7.24 | 9.06 | 0.58 |
 
-- **Performance:**  
-  - Train / validation metrics  
+- **Best model:** `RandomForestRegressor` (default hyperparameters, `random_state=42`)
 
-- **Key findings from EDA:**  
-  - Data quality issues  
-  - Most informative features  
-  - Assumptions made  
+- **Key findings:**
+  - Tree-based models significantly outperform Linear Regression, suggesting
+    non-linear relationships between student habits, demographics, and exam scores.
+  - Random Forest (RMSE 5.36, R² 0.85) explains 85% of variance in `final_test`,
+    with an average prediction error of ~5 score points.
+  - The gap between Linear Regression and Random Forest (RMSE 9.06 vs 5.36)
+    confirms the value of ensemble methods on this dataset.
 
+- **Known limitations:**
+  - No hyperparameter tuning applied; default sklearn settings used throughout.
+  - Median imputation for `attendance_rate` was computed on the full dataset
+    rather than the training split only; a production pipeline would fit
+    imputers on train data only to avoid leakage.
+  - Results are from a single train/val/test split (no cross-validation).
