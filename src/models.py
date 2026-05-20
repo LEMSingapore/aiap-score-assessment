@@ -112,6 +112,63 @@ def evaluate_regression(y_true: pd.Series, y_pred: np.ndarray) -> Dict[str, floa
         "r2": r2_score(y_true, y_pred),
     }
 
+def cross_validate_models(
+    X_train: pd.DataFrame,
+    y_train: pd.Series,
+    cv: int = 5,
+) -> pd.DataFrame:
+    """
+    Run k-fold cross-validation on the training set for all candidate models.
+
+    Reports mean and std of RMSE across folds. This gives a more robust
+    estimate of model performance than a single train/test split, and the
+    std column flags fragile models whose performance depends heavily on
+    which rows happened to land in the test fold.
+
+    Note: CV is run on X_train / y_train only — the held-out test set
+    remains untouched for final evaluation in train_and_evaluate_models.
+
+    Args:
+        X_train: Training feature matrix.
+        y_train: Training target vector.
+        cv: Number of CV folds (default 5).
+
+    Returns:
+        DataFrame with columns: model, rmse_mean, rmse_std, sorted by
+        rmse_mean ascending.
+    """
+    from sklearn.model_selection import cross_val_score
+
+    pipelines = build_model_pipelines()
+    rows = []
+
+    for model_name, pipeline in pipelines.items():
+        # neg_root_mean_squared_error returns negative RMSE so that "higher is better"
+        # convention holds for sklearn; we flip the sign for reporting.
+        neg_rmse_scores = cross_val_score(
+            pipeline,
+            X_train,
+            y_train,
+            cv=cv,
+            scoring="neg_root_mean_squared_error",
+            n_jobs=-1,
+        )
+        rmse_scores = -neg_rmse_scores
+
+        rows.append({
+            "model": model_name,
+            "rmse_mean": rmse_scores.mean(),
+            "rmse_std": rmse_scores.std(),
+        })
+
+    cv_df = (
+        pd.DataFrame(rows)
+        .sort_values(by="rmse_mean", ascending=True)
+        .reset_index(drop=True)
+    )
+
+    return cv_df
+
 def train_and_evaluate_models(
     X_train: pd.DataFrame,
     X_test: pd.DataFrame,
