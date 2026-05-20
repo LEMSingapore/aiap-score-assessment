@@ -3,6 +3,7 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
+ARTIFACTS_DIR = PROJECT_ROOT / "artifacts"
 DB_PATH = DATA_DIR / "score.db"
 
 TARGET_COL = "final_test"
@@ -14,7 +15,7 @@ NUM_FEATURES = [
     "number_of_siblings",
     "hours_per_week",
     "attendance_rate",
-    "classsize",
+    "class_size", # was: classsize
 ]
 
 CAT_FEATURES = [

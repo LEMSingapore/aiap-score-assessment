@@ -11,8 +11,9 @@ from src.models import (
     cross_validate_models,
     tune_models,                  # NEW (sprint 5)
     evaluate_regression,          # NEW (sprint 5) — used for tuned models
+    save_best_model,              # NEW (sprint 7)
 )
-from src.settings import DB_PATH, RANDOM_STATE, TEST_SIZE
+from src.settings import DB_PATH, RANDOM_STATE, TEST_SIZE, ARTIFACTS_DIR   # NEW: ARTIFACTS_DIR
 
 def main() -> None:
     """
@@ -66,6 +67,29 @@ def main() -> None:
     print(f"\nBest tuned model: {best_model_name}")
 
     best_pipeline = tuned_pipelines[best_model_name]
+
+    # NEW (sprint 7): persist best model + metadata
+    best_test_metrics = test_df.iloc[0].to_dict()
+    best_cv_rmse = tuning_df[tuning_df["model"] == best_model_name]["best_cv_rmse"].iloc[0]
+    best_params = tuning_df[tuning_df["model"] == best_model_name]["best_params"].iloc[0]
+
+    model_path, metadata_path = save_best_model(
+        pipeline=best_pipeline,
+        model_name=best_model_name,
+        cv_rmse=best_cv_rmse,
+        test_metrics=best_test_metrics,
+        best_params=best_params,
+        feature_list=list(X.columns),
+        artifacts_dir=ARTIFACTS_DIR,
+    )
+    print(f"\nSaved best model to: {model_path}")
+    print(f"Saved metadata to:   {metadata_path}")
+
+    # also save the comparison table for the README
+    comparison_path = ARTIFACTS_DIR / "model_comparison.csv"
+    test_df.to_csv(comparison_path, index=False)
+    print(f"Saved test comparison to: {comparison_path}")
+
     model = best_pipeline.named_steps["model"]
     if hasattr(model, "feature_importances_"):
         importance_df = get_feature_importance(best_pipeline)

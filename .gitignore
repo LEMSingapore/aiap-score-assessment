@@ -26,11 +26,15 @@ data/*.csv
 data/*.parquet
 data/*.xlsx
 
-artifacts/
-*.model
-*.joblib
-*.pkl
+# Artifacts — ignore build outputs by default,
+# but track lightweight provenance files for assessor inspection
+artifacts/*
+!artifacts/best_model_metadata.json
+!artifacts/model_comparison.csv
 
 # Logs
 logs/
 *.log
+
+# Large build output — regenerable via ./run.sh
+artifacts/best_model.joblib

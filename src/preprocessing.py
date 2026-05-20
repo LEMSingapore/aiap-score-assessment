@@ -84,18 +84,22 @@ def normalise_categoricals(df: pd.DataFrame) -> pd.DataFrame:
     """
     df = df.copy()
 
+    # OLD (sprint 6): uppercase keys unreachable after .str.lower()
+    # ccamap = {
+    #     "sports": "Sports", "sport": "Sports", "SPORTS": "Sports",
+    #     "clubs": "Clubs", "club": "Clubs", "CLUBS": "Clubs",
+    #     "arts": "Arts", "art": "Arts", "ARTS": "Arts",
+    #     "none": "None", "NONE": "None",
+    # }
+
     ccamap = {
         "sports": "Sports",
         "sport": "Sports",
-        "SPORTS": "Sports",
         "clubs": "Clubs",
         "club": "Clubs",
-        "CLUBS": "Clubs",
         "arts": "Arts",
         "art": "Arts",
-        "ARTS": "Arts",
         "none": "None",
-        "NONE": "None",
     }
 
     tuitionmap = {
@@ -217,7 +221,7 @@ def drop_id_and_low_signal_columns(df: pd.DataFrame) -> pd.DataFrame:
     df = df.drop(columns=to_drop, errors="ignore")
     return df
 
-def add_classsize(df: pd.DataFrame) -> pd.DataFrame:
+def add_class_size(df: pd.DataFrame) -> pd.DataFrame:
     """
     Engineer `classsize` from `n_male` and `n_female`, then drop the originals.
 
@@ -233,7 +237,7 @@ def add_classsize(df: pd.DataFrame) -> pd.DataFrame:
     """
     df = df.copy()
 
-    df["classsize"] = df["n_male"] + df["n_female"]
+    df["class_size"] = df["n_male"] + df["n_female"]
     df = df.drop(columns=["n_male", "n_female"], errors="ignore")
 
     return df
@@ -314,7 +318,7 @@ def prepare_dataset(db_path: Path) -> Tuple[pd.DataFrame, pd.Series]:
     df = drop_missing_target(df)
     df = clean_age(df)
     df = handle_attendance(df)
-    df = add_classsize(df)
+    df = add_class_size(df)
     df = drop_id_and_low_signal_columns(df)
     df = maybe_drop_age(df)
     X, y = make_feature_target(df)

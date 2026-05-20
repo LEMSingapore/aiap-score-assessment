@@ -1,7 +1,16 @@
+
+
+
+
+from datetime import datetime, timezone     # NEW (sprint 7)
+from pathlib import Path                    # NEW (sprint 7): needed for save_best_model type hint
+import json                                  # NEW (sprint 7)
 from typing import Dict, Tuple
 
+import joblib                                # NEW (sprint 7)
 import numpy as np
 import pandas as pd
+import sklearn                               # NEW (sprint 7) — for version capture
 
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
@@ -340,3 +349,56 @@ def get_feature_importance(best_pipeline: Pipeline) -> pd.DataFrame:
     ).sort_values(by="importance", ascending=False).reset_index(drop=True)
 
     return importance_df
+
+def save_best_model(
+    pipeline: Pipeline,
+    model_name: str,
+    cv_rmse: float,
+    test_metrics: Dict[str, float],
+    best_params: Dict,
+    feature_list: list,
+    artifacts_dir: Path,
+) -> Tuple[Path, Path]:
+    """
+    Persist the best tuned model and its metadata to disk.
+
+    Saves two files:
+    - `best_model.joblib` — the fitted sklearn Pipeline (preprocessor + model),
+      ready for inference without retraining.
+    - `best_model_metadata.json` — provenance: timestamp, sklearn version,
+      model name, best hyperparameters, CV and held-out test metrics,
+      and the input feature list expected at inference time.
+
+    Args:
+        pipeline: Fitted sklearn Pipeline to persist.
+        model_name: Name of the model (e.g. 'random_forest').
+        cv_rmse: Best CV RMSE from GridSearchCV.
+        test_metrics: Dict of held-out test metrics (mae, rmse, r2).
+        best_params: Best hyperparameters from GridSearchCV.
+        feature_list: List of input column names the model expects.
+        artifacts_dir: Directory to save artifacts into.
+
+    Returns:
+        Tuple of (model_path, metadata_path).
+    """
+    artifacts_dir.mkdir(parents=True, exist_ok=True)
+
+    model_path = artifacts_dir / "best_model.joblib"
+    metadata_path = artifacts_dir / "best_model_metadata.json"
+
+    joblib.dump(pipeline, model_path)
+
+    metadata = {
+        "model_name": model_name,
+        "trained_at_utc": datetime.now(timezone.utc).isoformat(),
+        "sklearn_version": sklearn.__version__,
+        "best_params": best_params,
+        "cv_rmse": float(cv_rmse),
+        "test_metrics": {k: float(v) for k, v in test_metrics.items() if k != "model"},
+        "feature_list": list(feature_list),
+    }
+
+    with metadata_path.open("w") as f:
+        json.dump(metadata, f, indent=2)
+
+    return model_path, metadata_path
