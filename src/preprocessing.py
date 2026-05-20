@@ -144,25 +144,28 @@ def clean_age(df: pd.DataFrame) -> pd.DataFrame:
     Fix invalid ages and handle implausible values.
 
     Decisions from EDA:
-    - Negative ages are treated as data errors: set to NaN, then impute
-      with the median age.
+    - Negative ages are treated as data errors and set to NaN.
     - Ages 5 and 6 are implausible for secondary students; they are
       corrected to 15 and 16 respectively (assumed leading digit dropped).
+    - Statistical imputation is deferred to the sklearn pipeline so it
+      can be fitted on the training split only.
 
     Args:
         df: Dataframe including an 'age' column.
 
     Returns:
-        df: Dataframe with cleaned 'age' values.
+        df: Dataframe with cleaned 'age' values (NaNs may remain).
     """
     df = df.copy()
 
     # Treat negative ages as missing
     df.loc[df["age"] < 0, "age"] = np.nan
 
-    # Impute missing ages with the median of the non-missing values
-    median_age = df["age"].median()
-    df["age"] = df["age"].fillna(median_age)
+    # OLD (sprint 1): leaked full-dataset median into training
+    # median_age = df["age"].median()
+    # df["age"] = df["age"].fillna(median_age)
+    #
+    # FIX: deferred to SimpleImputer in models.build_preprocessor().
 
     # Correct obviously mis-entered ages 5 and 6
     df.loc[df["age"] == 5, "age"] = 15
@@ -175,33 +178,17 @@ def clean_age(df: pd.DataFrame) -> pd.DataFrame:
 # ---------------------------------------------------------------------
 
 def handle_attendance(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Handle missing `attendance_rate` with an indicator + median imputation.
-
-    Decisions from EDA:
-    - About 4.9% of rows are missing `attendance_rate`.
-    - Create a binary `attendance_rate_was_nan` flag so the model can use the
-      fact that the original value was missing.
-    - Impute missing `attendance_rate` with the column median.
-
-    NOTE:
-    In the modelling pipeline, the imputer should be fitted on the training
-    split only. This function implements the EDA-level behaviour.
-
-    Args:
-        df: Dataframe including `attendance_rate`.
-
-    Returns:
-        df: Dataframe with indicator column added and missing values imputed.
-    """
     df = df.copy()
 
-    # Indicator of original missingness
+    # Indicator of original missingness (deterministic, safe pre-split)
     df["attendance_rate_was_nan"] = df["attendance_rate"].isna().astype(int)
 
-    # Median imputation
-    median_attendance = df["attendance_rate"].median()
-    df["attendance_rate"] = df["attendance_rate"].fillna(median_attendance)
+    # OLD (sprint 1): leaked test-set median into training
+    # median_attendance = df["attendance_rate"].median()
+    # df["attendance_rate"] = df["attendance_rate"].fillna(median_attendance)
+    #
+    # FIX: imputation deferred to SimpleImputer in models.build_preprocessor(),
+    # which is fitted on the training split only.
 
     return df
 
