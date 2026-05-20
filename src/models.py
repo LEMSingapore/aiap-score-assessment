@@ -169,6 +169,97 @@ def cross_validate_models(
 
     return cv_df
 
+def tune_models(
+    X_train: pd.DataFrame,
+    y_train: pd.Series,
+    cv: int = 5,
+) -> Tuple[Dict[str, Pipeline], pd.DataFrame]:
+    """
+    Run GridSearchCV on tunable models (random_forest, gradient_boosting).
+
+    Search grids are intentionally small so the assessment runs in a few
+    minutes and the chosen values are easy to defend. The grids cover the
+    most impactful hyperparameters for each model:
+
+    - Random Forest: n_estimators (capacity), max_depth (overfit control),
+      min_samples_leaf (smoothing).
+    - Gradient Boosting: n_estimators, learning_rate, max_depth — the
+      classic boosting tradeoff between learning rate and tree count.
+
+    Linear Regression and DummyRegressor are not tuned (no meaningful
+    hyperparameters for this task).
+
+    Args:
+        X_train: Training feature matrix.
+        y_train: Training target.
+        cv: Number of CV folds for inner grid search (default 5).
+
+    Returns:
+        tuned_pipelines: Dict mapping model name to refitted best pipeline.
+        tuning_df: DataFrame with model, best_params, best_cv_rmse.
+    """
+    from sklearn.model_selection import GridSearchCV
+
+    preprocessor = build_preprocessor()
+
+    # ---- Random Forest grid ----
+    rf_pipeline = Pipeline([
+        ("preprocessor", preprocessor),
+        ("model", RandomForestRegressor(
+            random_state=RANDOM_STATE,
+            n_jobs=-1,
+        )),
+    ])
+    rf_grid = {
+        "model__n_estimators": [200, 400],
+        "model__max_depth": [None, 10, 20],
+        "model__min_samples_leaf": [1, 2, 4],
+    }
+
+    # ---- Gradient Boosting grid ----
+    gbr_pipeline = Pipeline([
+        ("preprocessor", preprocessor),
+        ("model", GradientBoostingRegressor(
+            random_state=RANDOM_STATE,
+        )),
+    ])
+    gbr_grid = {
+        "model__n_estimators": [200, 400],
+        "model__learning_rate": [0.05, 0.1],
+        "model__max_depth": [3, 5],
+    }
+
+    search_configs = {
+        "random_forest": (rf_pipeline, rf_grid),
+        "gradient_boosting": (gbr_pipeline, gbr_grid),
+    }
+
+    tuned_pipelines = {}
+    rows = []
+
+    for model_name, (pipeline, grid) in search_configs.items():
+        print(f"  Tuning {model_name}...")
+        search = GridSearchCV(
+            estimator=pipeline,
+            param_grid=grid,
+            cv=cv,
+            scoring="neg_root_mean_squared_error",
+            n_jobs=-1,
+            refit=True,
+        )
+        search.fit(X_train, y_train)
+
+        tuned_pipelines[model_name] = search.best_estimator_
+        rows.append({
+            "model": model_name,
+            "best_cv_rmse": -search.best_score_,
+            "best_params": search.best_params_,
+        })
+
+    tuning_df = pd.DataFrame(rows).sort_values(by="best_cv_rmse").reset_index(drop=True)
+
+    return tuned_pipelines, tuning_df
+
 def train_and_evaluate_models(
     X_train: pd.DataFrame,
     X_test: pd.DataFrame,
