@@ -6,10 +6,11 @@ import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LinearRegression
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.dummy import DummyRegressor
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 
 from src.settings import (
     NUM_FEATURES,
@@ -59,20 +60,26 @@ def build_model_pipelines() -> Dict[str, Pipeline]:
     preprocessor = build_preprocessor()
 
     models = {
+        # OLD (sprint 3): no baseline
+        # "linear_regression": LinearRegression(),
+        #
+        # NEW: DummyRegressor as floor — predicts mean of y_train for every row.
+        # Establishes the trivial lower bound; any real model should beat this.
+        "baseline_mean": DummyRegressor(strategy="mean"),
         "linear_regression": LinearRegression(),
         "random_forest": RandomForestRegressor(
             n_estimators=300,
             max_depth=None,
             min_samples_split=5,
             min_samples_leaf=2,
-            random_state=42,
+            random_state=RANDOM_STATE,   # bonus: also fixing the hardcoded 42 here
             n_jobs=-1,
         ),
         "gradient_boosting": GradientBoostingRegressor(
             n_estimators=200,
             learning_rate=0.05,
             max_depth=3,
-            random_state=42,
+            random_state=RANDOM_STATE,   # and here
         ),
     }
 
