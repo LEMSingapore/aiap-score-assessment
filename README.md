@@ -65,6 +65,8 @@ cd aiap-score-assessment
 
 2. Create and activate a virtual environment:
 
+# Requires Python 3.11 or higher (pandas 3.0 dependency)
+
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
