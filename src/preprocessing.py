@@ -6,30 +6,28 @@ in eda.ipynb, so the modelling pipeline can rely on a consistent, cleaned
 feature set.
 """
 
-from pathlib import Path
 import sqlite3
-from typing import Tuple
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-
 # ---------------------------------------------------------------------
 # Top-level constants (mirroring final feature set in eda.ipynb)
 # ---------------------------------------------------------------------
-
 from src.settings import (
-    TARGET_COL,
-    NUM_FEATURES,
     CAT_FEATURES,
-    INDICATOR_FEATURES,
     ID_COLUMNS,
+    INDICATOR_FEATURES,
     LOW_SIGNAL_COLUMNS,
+    NUM_FEATURES,
+    TARGET_COL,
 )
 
 # ---------------------------------------------------------------------
 # 1. Data loading
 # ---------------------------------------------------------------------
+
 
 def load_data(db_path: Path) -> pd.DataFrame:
     """
@@ -63,9 +61,11 @@ def load_data(db_path: Path) -> pd.DataFrame:
 
     return df
 
+
 # ---------------------------------------------------------------------
 # 2. Categorical normalisation (CCA, tuition)
 # ---------------------------------------------------------------------
+
 
 def normalise_categoricals(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -116,9 +116,11 @@ def normalise_categoricals(df: pd.DataFrame) -> pd.DataFrame:
     df["tuition"] = df["tuition"].str.strip().str.lower().map(tuitionmap)
     return df
 
+
 # ---------------------------------------------------------------------
 # 3. Target handling
 # ---------------------------------------------------------------------
+
 
 def drop_missing_target(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -139,9 +141,11 @@ def drop_missing_target(df: pd.DataFrame) -> pd.DataFrame:
     df = df.dropna(subset=[TARGET_COL])
     return df
 
+
 # ---------------------------------------------------------------------
 # 4. Age cleaning
 # ---------------------------------------------------------------------
+
 
 def clean_age(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -177,9 +181,11 @@ def clean_age(df: pd.DataFrame) -> pd.DataFrame:
 
     return df
 
+
 # ---------------------------------------------------------------------
 # 5. Attendance rate missingness
 # ---------------------------------------------------------------------
+
 
 def handle_attendance(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
@@ -196,9 +202,11 @@ def handle_attendance(df: pd.DataFrame) -> pd.DataFrame:
 
     return df
 
+
 # ---------------------------------------------------------------------
 # 6. Identifier / low-signal drops and classsize
 # ---------------------------------------------------------------------
+
 
 def drop_id_and_low_signal_columns(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -221,6 +229,7 @@ def drop_id_and_low_signal_columns(df: pd.DataFrame) -> pd.DataFrame:
     df = df.drop(columns=to_drop, errors="ignore")
     return df
 
+
 def add_class_size(df: pd.DataFrame) -> pd.DataFrame:
     """
     Engineer `classsize` from `n_male` and `n_female`, then drop the originals.
@@ -242,6 +251,7 @@ def add_class_size(df: pd.DataFrame) -> pd.DataFrame:
 
     return df
 
+
 def maybe_drop_age(df: pd.DataFrame) -> pd.DataFrame:
     """
     Optionally drop `age` from the feature set after cleaning.
@@ -260,11 +270,13 @@ def maybe_drop_age(df: pd.DataFrame) -> pd.DataFrame:
     df = df.drop(columns=["age"], errors="ignore")
     return df
 
+
 # ---------------------------------------------------------------------
 # 7. Final feature / target split
 # ---------------------------------------------------------------------
 
-def make_feature_target(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
+
+def make_feature_target(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
     """
     Select the final feature set and separate X, y.
 
@@ -292,7 +304,8 @@ def make_feature_target(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
 # 8. Orchestration helper
 # ---------------------------------------------------------------------
 
-def prepare_dataset(db_path: Path) -> Tuple[pd.DataFrame, pd.Series]:
+
+def prepare_dataset(db_path: Path) -> tuple[pd.DataFrame, pd.Series]:
     """
     Full preprocessing pipeline used by main.py.
 

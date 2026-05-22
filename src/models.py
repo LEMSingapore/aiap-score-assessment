@@ -1,32 +1,27 @@
+import json  # NEW (sprint 7)
+from datetime import UTC, datetime  # NEW (sprint 7)
+from pathlib import Path  # NEW (sprint 7): needed for save_best_model type hint
 
-
-
-
-from datetime import datetime, timezone     # NEW (sprint 7)
-from pathlib import Path                    # NEW (sprint 7): needed for save_best_model type hint
-import json                                  # NEW (sprint 7)
-from typing import Dict, Tuple
-
-import joblib                                # NEW (sprint 7)
+import joblib  # NEW (sprint 7)
 import numpy as np
 import pandas as pd
-import sklearn                               # NEW (sprint 7) — for version capture
-
+import sklearn  # NEW (sprint 7) — for version capture
 from sklearn.compose import ColumnTransformer
+from sklearn.dummy import DummyRegressor
+from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from sklearn.dummy import DummyRegressor
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 
 from src.settings import (
-    NUM_FEATURES,
     CAT_FEATURES,
     INDICATOR_FEATURES,
+    NUM_FEATURES,
     RANDOM_STATE,
 )
+
 
 def build_preprocessor() -> ColumnTransformer:
     """
@@ -59,7 +54,8 @@ def build_preprocessor() -> ColumnTransformer:
 
     return preprocessor
 
-def build_model_pipelines() -> Dict[str, Pipeline]:
+
+def build_model_pipelines() -> dict[str, Pipeline]:
     """
     Build candidate model pipelines.
 
@@ -81,14 +77,14 @@ def build_model_pipelines() -> Dict[str, Pipeline]:
             max_depth=None,
             min_samples_split=5,
             min_samples_leaf=2,
-            random_state=RANDOM_STATE,   # bonus: also fixing the hardcoded 42 here
+            random_state=RANDOM_STATE,  # bonus: also fixing the hardcoded 42 here
             n_jobs=-1,
         ),
         "gradient_boosting": GradientBoostingRegressor(
             n_estimators=200,
             learning_rate=0.05,
             max_depth=3,
-            random_state=RANDOM_STATE,   # and here
+            random_state=RANDOM_STATE,  # and here
         ),
     }
 
@@ -104,7 +100,8 @@ def build_model_pipelines() -> Dict[str, Pipeline]:
 
     return pipelines
 
-def evaluate_regression(y_true: pd.Series, y_pred: np.ndarray) -> Dict[str, float]:
+
+def evaluate_regression(y_true: pd.Series, y_pred: np.ndarray) -> dict[str, float]:
     """
     Compute regression metrics.
 
@@ -121,6 +118,7 @@ def evaluate_regression(y_true: pd.Series, y_pred: np.ndarray) -> Dict[str, floa
         "r2": r2_score(y_true, y_pred),
     }
 
+
 def cross_validate_models(
     X_train: pd.DataFrame,
     y_train: pd.Series,
@@ -135,8 +133,8 @@ def cross_validate_models(
     which rows happened to land in the test fold.
 
     Note: CV is run on X_train / y_train only — the held-out test set
-    remains untouched for final evaluation in train_and_evaluate_models.
-
+    remains untouched for final evaluation in main.py.
+    
     Args:
         X_train: Training feature matrix.
         y_train: Training target vector.
@@ -164,11 +162,13 @@ def cross_validate_models(
         )
         rmse_scores = -neg_rmse_scores
 
-        rows.append({
-            "model": model_name,
-            "rmse_mean": rmse_scores.mean(),
-            "rmse_std": rmse_scores.std(),
-        })
+        rows.append(
+            {
+                "model": model_name,
+                "rmse_mean": rmse_scores.mean(),
+                "rmse_std": rmse_scores.std(),
+            }
+        )
 
     cv_df = (
         pd.DataFrame(rows)
@@ -178,11 +178,12 @@ def cross_validate_models(
 
     return cv_df
 
+
 def tune_models(
     X_train: pd.DataFrame,
     y_train: pd.Series,
     cv: int = 5,
-) -> Tuple[Dict[str, Pipeline], pd.DataFrame]:
+) -> tuple[dict[str, Pipeline], pd.DataFrame]:
     """
     Run GridSearchCV on tunable models (random_forest, gradient_boosting).
 
@@ -212,13 +213,18 @@ def tune_models(
     preprocessor = build_preprocessor()
 
     # ---- Random Forest grid ----
-    rf_pipeline = Pipeline([
-        ("preprocessor", preprocessor),
-        ("model", RandomForestRegressor(
-            random_state=RANDOM_STATE,
-            n_jobs=-1,
-        )),
-    ])
+    rf_pipeline = Pipeline(
+        [
+            ("preprocessor", preprocessor),
+            (
+                "model",
+                RandomForestRegressor(
+                    random_state=RANDOM_STATE,
+                    n_jobs=-1,
+                ),
+            ),
+        ]
+    )
     rf_grid = {
         "model__n_estimators": [200, 400],
         "model__max_depth": [None, 10, 20],
@@ -226,12 +232,17 @@ def tune_models(
     }
 
     # ---- Gradient Boosting grid ----
-    gbr_pipeline = Pipeline([
-        ("preprocessor", preprocessor),
-        ("model", GradientBoostingRegressor(
-            random_state=RANDOM_STATE,
-        )),
-    ])
+    gbr_pipeline = Pipeline(
+        [
+            ("preprocessor", preprocessor),
+            (
+                "model",
+                GradientBoostingRegressor(
+                    random_state=RANDOM_STATE,
+                ),
+            ),
+        ]
+    )
     gbr_grid = {
         "model__n_estimators": [200, 400],
         "model__learning_rate": [0.05, 0.1],
@@ -259,57 +270,18 @@ def tune_models(
         search.fit(X_train, y_train)
 
         tuned_pipelines[model_name] = search.best_estimator_
-        rows.append({
-            "model": model_name,
-            "best_cv_rmse": -search.best_score_,
-            "best_params": search.best_params_,
-        })
+        rows.append(
+            {
+                "model": model_name,
+                "best_cv_rmse": -search.best_score_,
+                "best_params": search.best_params_,
+            }
+        )
 
     tuning_df = pd.DataFrame(rows).sort_values(by="best_cv_rmse").reset_index(drop=True)
 
     return tuned_pipelines, tuning_df
 
-def train_and_evaluate_models(
-    X_train: pd.DataFrame,
-    X_test: pd.DataFrame,
-    y_train: pd.Series,
-    y_test: pd.Series,
-) -> Tuple[Dict[str, Pipeline], pd.DataFrame]:
-    """
-    Train all candidate models and evaluate on the test set.
-
-    Args:
-        X_train: Training feature matrix.
-        X_test: Test feature matrix.
-        y_train: Training target.
-        y_test: Test target.
-
-    Returns:
-        trained_models: Dict of fitted model pipelines.
-        results_df: DataFrame with one row per model and regression metrics.
-    """
-    pipelines = build_model_pipelines()
-
-    trained_models = {}
-    results = []
-
-    for model_name, pipeline in pipelines.items():
-        pipeline.fit(X_train, y_train)
-        y_pred = pipeline.predict(X_test)
-
-        metrics = evaluate_regression(y_test, y_pred)
-        metrics["model"] = model_name
-
-        trained_models[model_name] = pipeline
-        results.append(metrics)
-
-    results_df = (
-        pd.DataFrame(results)
-        .sort_values(by="rmse", ascending=True)
-        .reset_index(drop=True)
-    )
-
-    return trained_models, results_df
 
 def get_feature_importance(best_pipeline: Pipeline) -> pd.DataFrame:
     """
@@ -341,24 +313,29 @@ def get_feature_importance(best_pipeline: Pipeline) -> pd.DataFrame:
     feature_names = NUM_FEATURES + cat_feature_names + INDICATOR_FEATURES
     importances = model.feature_importances_
 
-    importance_df = pd.DataFrame(
-        {
-            "feature": feature_names,
-            "importance": importances,
-        }
-    ).sort_values(by="importance", ascending=False).reset_index(drop=True)
+    importance_df = (
+        pd.DataFrame(
+            {
+                "feature": feature_names,
+                "importance": importances,
+            }
+        )
+        .sort_values(by="importance", ascending=False)
+        .reset_index(drop=True)
+    )
 
     return importance_df
+
 
 def save_best_model(
     pipeline: Pipeline,
     model_name: str,
     cv_rmse: float,
-    test_metrics: Dict[str, float],
-    best_params: Dict,
+    test_metrics: dict[str, float],
+    best_params: dict,
     feature_list: list,
     artifacts_dir: Path,
-) -> Tuple[Path, Path]:
+) -> tuple[Path, Path]:
     """
     Persist the best tuned model and its metadata to disk.
 
@@ -390,7 +367,7 @@ def save_best_model(
 
     metadata = {
         "model_name": model_name,
-        "trained_at_utc": datetime.now(timezone.utc).isoformat(),
+        "trained_at_utc": datetime.now(UTC).isoformat(),
         "sklearn_version": sklearn.__version__,
         "best_params": best_params,
         "cv_rmse": float(cv_rmse),

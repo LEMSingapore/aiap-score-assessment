@@ -38,3 +38,4 @@ logs/
 
 # Large build output — regenerable via ./run.sh
 artifacts/best_model.joblib
+.ruff_cache/
