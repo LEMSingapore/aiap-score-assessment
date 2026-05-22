@@ -23,14 +23,14 @@ The preprocessing pipeline in `src/preprocessing.py` implements the key EDA deci
 
 - Normalise messy categorical labels in `CCA` and `tuition`.
 - Drop rows with missing `final_test`, since the target should not be imputed for supervised learning.
-- Treat negative ages as data errors, impute missing age values with the median, and correct implausible ages 5 and 6 to 15 and 16.
-- Handle missing `attendance_rate` using both median imputation and a missingness flag (`attendance_rate_was_nan`).
-- Engineer `classsize = n_male + n_female`.
+- Treat negative ages as data errors, correct implausible ages 5 and 6 to 15 and 16, then drop `age` from the feature set (near-zero variance after cleaning).
+- Flag missing `attendance_rate` with a missingness indicator (`attendance_rate_was_nan`); median imputation is deferred to the sklearn pipeline (post train/test split) to avoid leakage.
+- Engineer `class_size = n_male + n_female`.
 - Drop identifier and low-signal columns such as `student_id`, `bag_color`, `gender`, `wake_time`, and `mode_of_transport`.
 
 The final modelling feature set contains:
 
-- Numeric features: `number_of_siblings`, `hours_per_week`, `attendance_rate`, `classsize`
+- Numeric features: `number_of_siblings`, `hours_per_week`, `attendance_rate`, `class_size`
 - Categorical features: `direct_admission`, `CCA`, `learning_style`, `tuition`, `sleep_time`
 - Indicator feature: `attendance_rate_was_nan`
 
@@ -116,7 +116,7 @@ The pipeline performs the following steps:
 1. Load the data from `data/score.db`.
 2. Apply the preprocessing and feature engineering logic.
 3. Split the data into training and test sets.
-4. Train and compare three regression models.
+4. Train and compare four regression models.
 5. Evaluate the models using MAE, RMSE, and \(R^2\).
 6. Print the best-performing model and the top feature importances when supported by that model.
 
@@ -143,7 +143,7 @@ This module:
 
 - loads the SQLite table into a pandas DataFrame,
 - applies the cleaning decisions from EDA,
-- engineers `classsize`,
+- engineers `class_size`,
 - removes unused or low-signal columns,
 - returns the final feature matrix `X` and target vector `y`.
 
@@ -153,9 +153,11 @@ This module defines:
 
 - a `ColumnTransformer` for numeric, categorical, and indicator features,
 - candidate model pipelines for:
+  - `DummyRegressor` (mean-strategy baseline)
   - `LinearRegression`
   - `RandomForestRegressor`
   - `GradientBoostingRegressor`
+- cross-validation and `GridSearchCV` hyperparameter tuning helpers,
 - regression evaluation metrics:
   - MAE
   - RMSE
@@ -168,9 +170,10 @@ This module orchestrates the full flow:
 
 - calls `prepare_dataset()`,
 - performs the train/test split,
-- trains all candidate models,
-- ranks them by RMSE,
-- reports the best model,
+- runs 5-fold cross-validation on the candidate models,
+- tunes Random Forest and Gradient Boosting via `GridSearchCV`,
+- evaluates the tuned models on the held-out test set and ranks them by RMSE,
+- reports the best model and saves it (plus metadata) to `artifacts/`,
 - prints the top feature importances for the best tree-based model.
 
 ## 7. Feature Processing Summary
@@ -260,7 +263,7 @@ Random Forest is selected as the final model, though after tuning RF and GBR are
 
 | Rank | Feature | Importance |
 |---|---|---:|
-| 1 | `classsize` | 0.386 |
+| 1 | `class_size` | 0.386 |
 | 2 | `number_of_siblings` | 0.283 |
 | 3 | `hours_per_week` | 0.117 |
 | 4 | `attendance_rate` | 0.058 |
@@ -271,7 +274,7 @@ Random Forest is selected as the final model, though after tuning RF and GBR are
 | 9 | `direct_admission_No` | 0.013 |
 | 10 | `tuition_No` | 0.013 |
 
-The top four features (`classsize`, `number_of_siblings`, `hours_per_week`, `attendance_rate`) together account for ~84% of total importance. `classsize` being the dominant predictor is consistent with educational research linking class size to learning outcomes; the strong negative correlation of `number_of_siblings` with the target may proxy for socio-economic context rather than a direct causal effect.
+The top four features (`class_size`, `number_of_siblings`, `hours_per_week`, `attendance_rate`) together account for ~84% of total importance. `class_size` being the dominant predictor is consistent with educational research linking class size to learning outcomes; the strong negative correlation of `number_of_siblings` with the target may proxy for socio-economic context rather than a direct causal effect.
 
 ## 10. Key EDA Findings
 
@@ -280,7 +283,7 @@ Important findings from EDA that informed the pipeline include:
 - The target `final_test` had missing values, so rows with missing target were removed rather than imputed.
 - `CCA` and `tuition` contained inconsistent categorical labels and required normalisation.
 - `attendance_rate` had missing values and benefited from both imputation and a missingness indicator.
-- `n_male` and `n_female` were more useful after being combined into `classsize`.
+- `n_male` and `n_female` were more useful after being combined into `class_size`.
 - `age` had very low variance after correction and was dropped from the final feature set.
 - Several columns were excluded because they were identifiers, high-noise attributes, or showed weak predictive value during EDA.
 
