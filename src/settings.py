@@ -1,3 +1,10 @@
+"""Central configuration for the AIAP score assessment pipeline.
+
+Single source of truth for filesystem paths, the target column, the
+train/test split settings, and the feature-group definitions used
+across preprocessing and modelling.
+"""
+
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent

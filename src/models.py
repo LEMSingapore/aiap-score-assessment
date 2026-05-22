@@ -1,3 +1,11 @@
+"""Modelling utilities for the AIAP score assessment pipeline.
+
+Builds the sklearn preprocessing transformer and candidate model
+pipelines, runs cross-validation and GridSearchCV tuning, evaluates
+regression metrics, extracts feature importances, and persists the
+best model with provenance metadata.
+"""
+
 import json  # NEW (sprint 7)
 from datetime import UTC, datetime  # NEW (sprint 7)
 from pathlib import Path  # NEW (sprint 7): needed for save_best_model type hint
@@ -134,7 +142,7 @@ def cross_validate_models(
 
     Note: CV is run on X_train / y_train only — the held-out test set
     remains untouched for final evaluation in main.py.
-    
+
     Args:
         X_train: Training feature matrix.
         y_train: Training target vector.

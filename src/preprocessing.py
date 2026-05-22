@@ -155,8 +155,9 @@ def clean_age(df: pd.DataFrame) -> pd.DataFrame:
     - Negative ages are treated as data errors and set to NaN.
     - Ages 5 and 6 are implausible for secondary students; they are
       corrected to 15 and 16 respectively (assumed leading digit dropped).
-    - Statistical imputation is deferred to the sklearn pipeline so it
-      can be fitted on the training split only.
+    - No imputation is applied here. After cleaning, `age` is dropped
+      entirely from the feature set (see `maybe_drop_age`) because it
+      has near-zero variance once corrected.
 
     Args:
         df: Dataframe including an 'age' column.
@@ -188,6 +189,22 @@ def clean_age(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def handle_attendance(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Flag missing `attendance_rate` values with a missingness indicator.
+
+    Creates `attendance_rate_was_nan` before the train/test split. This
+    is deterministic and leakage-safe — it depends only on each row's
+    own value. Median imputation of `attendance_rate` itself is deferred
+    to the sklearn pipeline (`build_preprocessor`), fitted on the
+    training split only.
+
+    Args:
+        df: Dataframe including an 'attendance_rate' column.
+
+    Returns:
+        df: Dataframe with the 'attendance_rate_was_nan' indicator added
+            (original NaNs in 'attendance_rate' are left in place).
+    """
     df = df.copy()
 
     # Indicator of original missingness (deterministic, safe pre-split)
@@ -204,7 +221,7 @@ def handle_attendance(df: pd.DataFrame) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------
-# 6. Identifier / low-signal drops and classsize
+# 6. Identifier / low-signal drops and class_size
 # ---------------------------------------------------------------------
 
 
@@ -232,7 +249,7 @@ def drop_id_and_low_signal_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 def add_class_size(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Engineer `classsize` from `n_male` and `n_female`, then drop the originals.
+    Engineer `class_size` from `n_male` and `n_female`, then drop the originals.
 
     Decisions from EDA:
     - `n_male` and `n_female` each have limited value on their own.
@@ -242,7 +259,7 @@ def add_class_size(df: pd.DataFrame) -> pd.DataFrame:
         df: Dataframe including `n_male` and `n_female`.
 
     Returns:
-        df: Dataframe with `classsize` added and `n_male`/`n_female` removed.
+        df: Dataframe with `class_size` added and `n_male`/`n_female` removed.
     """
     df = df.copy()
 
@@ -281,7 +298,7 @@ def make_feature_target(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
     Select the final feature set and separate X, y.
 
     Final set (from EDA):
-    - Numeric: number_of_siblings, hours_per_week, attendance_rate, classsize
+    - Numeric: number_of_siblings, hours_per_week, attendance_rate, class_size
     - Categorical: direct_admission, CCA, learning_style, tuition, sleep_time
     - Indicator: attendance_rate_was_nan
     - Target: final_test
@@ -313,9 +330,9 @@ def prepare_dataset(db_path: Path) -> tuple[pd.DataFrame, pd.Series]:
     1. Load raw table from score.db.
     2. Normalise CCA and tuition labels.
     3. Drop rows with missing final_test.
-    4. Clean age (negative values, 5/6 corrections, impute median).
-    5. Handle attendancerate missingness (indicator + median).
-    6. Engineer classsize and drop nmale / nfemale.
+    4. Clean age (negative values, 5/6 corrections); no imputation.
+    5. Flag attendance_rate missingness with an indicator column.
+    6. Engineer class_size and drop n_male / n_female.
     7. Drop identifier and low-signal columns.
     8. Optionally drop age from features.
     9. Return X, y using the final feature list.

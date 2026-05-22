@@ -26,8 +26,10 @@ def main() -> None:
     2. Train/test split.
     3. 5-fold CV on default-param models (broad comparison).
     4. GridSearchCV on tunable models (RF, GBR) to find best hyperparameters.
-    5. Evaluate tuned models on held-out test set.
-    6. Print results and feature importances.
+    5. Evaluate tuned models on the held-out test set, ranked by RMSE.
+    6. Save the best model and its metadata to artifacts/.
+    7. Save the test-set comparison table to artifacts/.
+    8. Print CV/tuning/test summaries and feature importances.
     """
     X, y = prepare_dataset(DB_PATH)
 
