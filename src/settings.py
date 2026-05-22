@@ -1,5 +1,11 @@
-from pathlib import Path
+"""Central configuration for the AIAP score assessment pipeline.
 
+Single source of truth for filesystem paths, the target column, the
+train/test split settings, and the feature-group definitions used
+across preprocessing and modelling.
+"""
+
+from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
@@ -15,7 +21,7 @@ NUM_FEATURES = [
     "number_of_siblings",
     "hours_per_week",
     "attendance_rate",
-    "class_size", # was: classsize
+    "class_size",  # was: classsize
 ]
 
 CAT_FEATURES = [

@@ -1,19 +1,21 @@
-from pathlib import Path
-
-import pandas as pd       # NEW (sprint 5): needed for DataFrame in main
-
+import pandas as pd  # NEW (sprint 5): needed for DataFrame in main
 from sklearn.model_selection import train_test_split
 
-from src.preprocessing import prepare_dataset
 from src.models import (
-    train_and_evaluate_models,
-    get_feature_importance,
     cross_validate_models,
-    tune_models,                  # NEW (sprint 5)
-    evaluate_regression,          # NEW (sprint 5) — used for tuned models
-    save_best_model,              # NEW (sprint 7)
+    evaluate_regression,  # NEW (sprint 5) — used for tuned models
+    get_feature_importance,
+    save_best_model,  # NEW (sprint 7)
+    tune_models,  # NEW (sprint 5)
 )
-from src.settings import DB_PATH, RANDOM_STATE, TEST_SIZE, ARTIFACTS_DIR   # NEW: ARTIFACTS_DIR
+from src.preprocessing import prepare_dataset
+from src.settings import (  # NEW: ARTIFACTS_DIR
+    ARTIFACTS_DIR,
+    DB_PATH,
+    RANDOM_STATE,
+    TEST_SIZE,
+)
+
 
 def main() -> None:
     """
@@ -24,8 +26,10 @@ def main() -> None:
     2. Train/test split.
     3. 5-fold CV on default-param models (broad comparison).
     4. GridSearchCV on tunable models (RF, GBR) to find best hyperparameters.
-    5. Evaluate tuned models on held-out test set.
-    6. Print results and feature importances.
+    5. Evaluate tuned models on the held-out test set, ranked by RMSE.
+    6. Save the best model and its metadata to artifacts/.
+    7. Save the test-set comparison table to artifacts/.
+    8. Print CV/tuning/test summaries and feature importances.
     """
     X, y = prepare_dataset(DB_PATH)
 
@@ -56,11 +60,7 @@ def main() -> None:
         metrics["model"] = model_name
         test_results.append(metrics)
 
-    test_df = (
-        pd.DataFrame(test_results)
-        .sort_values(by="rmse")
-        .reset_index(drop=True)
-    )
+    test_df = pd.DataFrame(test_results).sort_values(by="rmse").reset_index(drop=True)
     print(test_df.to_string(index=False))
 
     best_model_name = test_df.iloc[0]["model"]
@@ -70,8 +70,12 @@ def main() -> None:
 
     # NEW (sprint 7): persist best model + metadata
     best_test_metrics = test_df.iloc[0].to_dict()
-    best_cv_rmse = tuning_df[tuning_df["model"] == best_model_name]["best_cv_rmse"].iloc[0]
-    best_params = tuning_df[tuning_df["model"] == best_model_name]["best_params"].iloc[0]
+    best_cv_rmse = tuning_df[tuning_df["model"] == best_model_name][
+        "best_cv_rmse"
+    ].iloc[0]
+    best_params = tuning_df[tuning_df["model"] == best_model_name]["best_params"].iloc[
+        0
+    ]
 
     model_path, metadata_path = save_best_model(
         pipeline=best_pipeline,
@@ -95,6 +99,7 @@ def main() -> None:
         importance_df = get_feature_importance(best_pipeline)
         print(f"\nTop 10 feature importances ({best_model_name}):")
         print(importance_df.head(10).to_string(index=False))
+
 
 if __name__ == "__main__":
     main()
